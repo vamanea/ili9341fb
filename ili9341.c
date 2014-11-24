@@ -30,7 +30,6 @@
 
 #include "ili9341.h"
 
-
 #define BLOCKLEN (4096)
 
 static int ili9341_spi_write(struct ili9341 *ili, uint8_t byte, bool data)
@@ -57,14 +56,14 @@ static int ili9341_spi_write_datablock(struct ili9341 *ili,
 {
 	int x, t;
 	unsigned short value;
-
+#if 0
 	//ToDo: send in parts if needed
 	if (len > BLOCKLEN) {
 		dev_err(ili->dev, "%s: len > blocklen (%i > %i)\n",
 			__func__, len, BLOCKLEN);
 		len = BLOCKLEN;
 	}
-
+#endif
 	dev_dbg(ili->dev, "%s: item=0x%p\n", __func__, (void *)ili);
 	gpio_set_value(ili->gpiodc, 1);
 
@@ -171,7 +170,7 @@ static int __init ili9341_pages_alloc(struct ili9341 *ili)
 	yoffset_per_page = pixels_per_page / ili->info->var.xres;
 	xoffset_per_page = pixels_per_page -
 	    (yoffset_per_page * ili->info->var.xres);
-	dev_dbg(ili->dev, "%s: item=0x%p pixels_per_page=%hu "
+	dev_info(ili->dev, "%s: item=0x%p pixels_per_page=%hu "
 		"yoffset_per_page=%hu xoffset_per_page=%hu\n",
 		__func__, (void *)ili, pixels_per_page,
 		yoffset_per_page, xoffset_per_page);
@@ -190,7 +189,7 @@ static int __init ili9341_pages_alloc(struct ili9341 *ili)
 		if (len > pixels_per_page) {
 			len = pixels_per_page;
 		}
-		dev_dbg(ili->dev,
+		dev_info(ili->dev,
 			"%s: page[%d]: x=%3hu y=%3hu buffer=0x%p len=%3hu\n",
 			__func__, index, x, y, buffer, len);
 		ili->pages[index].x = x;
@@ -448,6 +447,27 @@ static struct fb_deferred_io ili9341_defio = {
 	.deferred_io    = &ili9341_update,
 };
 
+void ili9341_set_orientation(struct ili9341 *ili, uint8_t flags)
+{
+	uint8_t madctl = 0x48;
+
+	if (flags & ILI9341_FLIP_X) {
+		madctl &= ~(1 << 6);
+	}
+
+	if (flags & ILI9341_FLIP_Y) {
+		madctl |= 1 << 7;
+	}
+
+	if (flags & ILI9341_SWITCH_XY) {
+		madctl |= 1 << 5;
+	}
+
+	ili9341_send_command(ili, ILI9341_MADCTL);
+	ili9341_send_byte(ili, madctl);
+}
+
+
 #define SCREEN_TEST
 static inline int ili9341_init_chip(struct ili9341 *ili)
 {
@@ -544,14 +564,16 @@ static inline int ili9341_init_chip(struct ili9341 *ili)
 	ili9341_send_byte(ili, 0x0F);
 	ili9341_send_command(ili, ILI9341_SLPOUT); //Exit Sleep
 	mdelay(120);
+	
+	ili9341_set_orientation(ili, ILI9341_SWITCH_XY | ILI9341_FLIP_X);
 	ili9341_send_command(ili, ILI9341_DISPON); //Display on
-
-	#ifdef SCREEN_TEST
+	
+#ifdef SCREEN_TEST
 	ili9341_set_window(ili, 0, 0, ILI9341_TFTWIDTH, ILI9341_TFTHEIGHT);
 	for(y=ILI9341_TFTHEIGHT; y>0; y--) {
 		for(x=ILI9341_TFTWIDTH; x>0; x--) {
-			ili9341_send_byte(ili, 0x00);
-			ili9341_send_byte(ili, 0x00);
+			ili9341_send_byte(ili, 0x55);
+			ili9341_send_byte(ili, 0x55);
 		}
 	}
 #endif

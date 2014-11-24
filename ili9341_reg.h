@@ -12,8 +12,16 @@
  * published by the Free Software Foundation.
 */
 
-#define ILI9341_TFTWIDTH 240
-#define ILI9341_TFTHEIGHT 320
+#define ILI9341_FLIP_X 1
+#define ILI9341_FLIP_Y 2
+#define ILI9341_SWITCH_XY 4
+
+//#define ILI9341_TFTWIDTH 240
+//#define ILI9341_TFTHEIGHT 320
+#define ILI9341_TFTWIDTH 320
+#define ILI9341_TFTHEIGHT 240
+
+
 #define ILI9341_NOP 0x00
 #define ILI9341_SWRESET 0x01
 #define ILI9341_RDDID 0x04
